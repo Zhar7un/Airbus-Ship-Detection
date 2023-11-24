@@ -1,7 +1,6 @@
 from unet_model import dice_loss, dice_score
 from data_preprocessing import create_dataset
 import matplotlib.pyplot as plt
-import numpy as np
 import tensorflow as tf
 
 BATCH_SIZE = 32
@@ -16,9 +15,7 @@ def evaluate(model, data_generator):
     images = batch[0]
     true_masks = batch[1]
 
-    # Perform inference
     prediction = model.predict(images)
-
     selected_mask = prediction[random_index]
 
     # Convert the selected prediction to a binary mask (thresholding at 0.5, assuming sigmoid activation)
