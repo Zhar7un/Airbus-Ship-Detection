@@ -39,8 +39,8 @@ def create_dataset(data_folder, batch_size, shuffle=True):
     masks_folder = os.path.join(data_folder, 'masks')
 
     image_filenames = os.listdir(images_folder)
-    image_paths = [os.path.join(images_folder, fname) for fname in image_filenames]
-    mask_paths = [os.path.join(masks_folder, fname.replace('.jpg', '.png')) for fname in image_filenames]
+    image_paths = sorted([os.path.join(images_folder, fname) for fname in image_filenames])
+    mask_paths = sorted([os.path.join(masks_folder, fname.replace('.jpg', '.png')) for fname in image_filenames])
 
     # Create a dataset of file paths
     dataset = tf.data.Dataset.from_tensor_slices((image_paths, mask_paths))
