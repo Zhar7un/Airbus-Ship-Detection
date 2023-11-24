@@ -2,46 +2,52 @@ import tensorflow as tf
 from keras import layers
 
 
-def build_unet(input_shape=(120, 120, 3), num_classes=1):
+def build_unet(input_shape=(128, 128, 3), num_classes=1):
     inputs = tf.keras.Input(shape=input_shape)
 
     # Encoder
-    conv1 = layers.Conv2D(64, 3, activation='relu', padding='same')(inputs)
-    conv1 = layers.Conv2D(64, 3, activation='relu', padding='same')(conv1)
-    pool1 = layers.MaxPooling2D(pool_size=(2, 2))(conv1)
+    x = layers.Conv2D(32, 3, strides=2, padding="same")(inputs)
+    x = layers.BatchNormalization()(x)
+    x = layers.Activation("relu")(x)
 
-    conv2 = layers.Conv2D(128, 3, activation='relu', padding='same')(pool1)
-    conv2 = layers.Conv2D(128, 3, activation='relu', padding='same')(conv2)
-    pool2 = layers.MaxPooling2D(pool_size=(2, 2))(conv2)
+    for filters in [64, 128, 256]:
+        residual = x
+        x = layers.Activation("relu")(x)
+        x = layers.SeparableConv2D(filters, 3, padding="same")(x)
+        x = layers.BatchNormalization()(x)
 
-    conv3 = layers.Conv2D(256, 3, activation='relu', padding='same')(pool2)
-    conv3 = layers.Conv2D(256, 3, activation='relu', padding='same')(conv3)
-    pool3 = layers.MaxPooling2D(pool_size=(2, 2))(conv3)
+        x = layers.Activation("relu")(x)
+        x = layers.SeparableConv2D(filters, 3, padding="same")(x)
+        x = layers.BatchNormalization()(x)
 
-    # Bottleneck
-    conv4 = layers.Conv2D(512, 3, activation='relu', padding='same')(pool3)
-    conv4 = layers.Conv2D(512, 3, activation='relu', padding='same')(conv4)
+        x = layers.MaxPooling2D(3, strides=2, padding="same")(x)
+
+        # Project residual
+        residual = layers.Conv2D(filters, 1, strides=2, padding="same")(residual)
+        x = layers.add([x, residual])
 
     # Decoder
-    up5 = layers.UpSampling2D(size=(2, 2))(conv4)
-    concat5 = layers.Concatenate()([up5, conv3])
-    conv5 = layers.Conv2D(256, 3, activation='relu', padding='same')(concat5)
-    conv5 = layers.Conv2D(256, 3, activation='relu', padding='same')(conv5)
+    for filters in [256, 128, 64, 32]:
+        residual = x
+        x = layers.Activation("relu")(x)
+        x = layers.Conv2DTranspose(filters, 3, padding="same")(x)
+        x = layers.BatchNormalization()(x)
 
-    up6 = layers.UpSampling2D(size=(2, 2))(conv5)
-    concat6 = layers.Concatenate()([up6, conv2])
-    conv6 = layers.Conv2D(128, 3, activation='relu', padding='same')(concat6)
-    conv6 = layers.Conv2D(128, 3, activation='relu', padding='same')(conv6)
+        x = layers.Activation("relu")(x)
+        x = layers.Conv2DTranspose(filters, 3, padding="same")(x)
+        x = layers.BatchNormalization()(x)
 
-    up7 = layers.UpSampling2D(size=(2, 2))(conv6)
-    concat7 = layers.Concatenate()([up7, conv1])
-    conv7 = layers.Conv2D(64, 3, activation='relu', padding='same')(concat7)
-    conv7 = layers.Conv2D(64, 3, activation='relu', padding='same')(conv7)
+        x = layers.UpSampling2D(2)(x)
+
+        # Project residual
+        residual = layers.UpSampling2D(2)(residual)
+        residual = layers.Conv2D(filters, 1, padding="same")(residual)
+        x = layers.add([x, residual])
 
     # Output layer
-    output = layers.Conv2D(num_classes, 1, activation='sigmoid')(conv7)
+    outputs = layers.Conv2D(1, 3, activation="sigmoid", padding="same")(x)
 
-    model = tf.keras.Model(inputs=inputs, outputs=output, name='unet')
+    model = tf.keras.Model(inputs, outputs)
     return model
 
 

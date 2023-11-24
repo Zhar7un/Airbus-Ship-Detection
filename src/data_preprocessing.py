@@ -2,7 +2,7 @@ import tensorflow as tf
 import os
 
 
-target_size = (120, 120)
+target_size = (128, 128)
 
 
 def preprocess_image(image):
